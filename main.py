@@ -22,13 +22,11 @@ LIGHT_GRAY = (180, 180, 180)
 
 colours = [RED, ORANGE, BLUE, YELLOW, GREEN, PINK]
 
-# Initialize Pygame
+# Initialize Main Pygame
 pygame.init()
 WINDOW = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("PYNAF - Room Map Prototype")
 FONT = pygame.font.SysFont(None, 28)
-
-use_sprite = True # toggleable variable to swithc on/off sprites.
 
 player_sprite = "assets/images/security_cat_32.png"
 # [fox, bear, rabbit, bird, bb, mangle]
@@ -183,6 +181,58 @@ status = {
     "Time": [pygame.Rect(950, 40, 100, 100), game_time]
 }
 
+# --- Start screen visuals
+# HOME start screen
+HOME = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+pygame.display.set_caption("PYNAF - Start Menu")
+HOME_FONT = pygame.font.SysFont(None, 14)
+
+home_title = "PyNAF - Prototype"
+
+home_buttons = {
+    "Start" : pygame.Rect(450, 350, 200, 100),
+    "Options" : pygame.Rect(450, 550, 200, 100)
+}
+
+# --- Game over screen visuals
+GAME_OVER = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+pygame.display.set_caption("PYNAF - Game Over")
+GAME_OVER_FONT = pygame.font.SysFont(None, 22)
+
+game_over_buttons = {
+    "Restart" : pygame.Rect(450, 350, 200, 100),
+    "Main Menu" : pygame.Rect(450, 550, 200, 100)
+}
+
+def draw_game_over():
+    title_rect = (300, 100, 500, 200)
+    pygame.draw.rect(WINDOW, LIGHT_GRAY, title_rect, border_radius=8)
+
+    mx, my = pygame.mouse.get_pos()
+    for name, rect in game_over_buttons.items():
+        hovered = rect.collidepoint(mx, my)
+        color = (100,100,200) if hovered else BLUE
+
+        pygame.draw.rect(WINDOW, color, rect, border_radius=8)
+        pygame.draw.rect(WINDOW, WHITE, rect, 2, border_radius=8)
+
+        text = FONT.render(name, True, BLACK)
+        WINDOW.blit(text, (rect.x + 10, rect.y + 10))
+
+def draw_home():
+    title_rect = (300, 100, 500, 200)
+    pygame.draw.rect(WINDOW, LIGHT_GRAY, title_rect, border_radius=8)
+
+    mx, my = pygame.mouse.get_pos()
+    for name, rect in home_buttons.items():
+        hovered = rect.collidepoint(mx, my)
+        color = (100,100,200) if hovered else BLUE
+
+        pygame.draw.rect(WINDOW, color, rect, border_radius=8)
+        pygame.draw.rect(WINDOW, WHITE, rect, 2, border_radius=8)
+
+        text = FONT.render(name, True, BLACK)
+        WINDOW.blit(text, (rect.x + 10, rect.y + 10))
 # --- Upgraded visuals ---
 
 def draw_bar(surface, x, y, w, h, percent, color_full, color_empty=(60,60,60)):
@@ -228,14 +278,9 @@ def draw_camera_overlay():
     WINDOW.blit(cam_surf, (0,0))
 
     for i, pos in enumerate(enemies_pos):
-        #rect = rooms[pos]
         if pos not in [0,1,2,3]:
             x,y = enemy_rect_pos[i]
-        #enemy_color = colours[i]
 
-        #enemy_surf = pygame.Surface((30,30), pygame.SRCALPHA)
-        #pygame.draw.circle(enemy_surf, (*enemy_color, alpha), (15,15), 15)
-       # WINDOW.blit(enemy_surf, (x-15, y-15))
             if use_sprite:
                 enemy_img = enemy_sprites[i]
                 enemy_img.set_alpha(alpha)
@@ -374,6 +419,7 @@ def move_enemies(enemy_rect_pos):
     # Need special move case for BB and fox.
     global mask_on
     global running
+    global game_over
     global bb_flashlight_cost
     global battery
 
@@ -385,7 +431,8 @@ def move_enemies(enemy_rect_pos):
             new_room = room # if no move, keep room the same
         elif new_room == 0 and mask_on == True:
             if i == 5:
-                running = 0
+                running = False
+                game_over = True
                 print("died to mangle")
             else:
                 new_room = enemies_start_pos[i]
@@ -395,7 +442,8 @@ def move_enemies(enemy_rect_pos):
                 status.update({"Battery": [pygame.Rect(50, WINDOW_HEIGHT-120, 100, 25), battery]})
                 new_room = enemies_start_pos[i]
             else:
-                running = 0
+                running = False
+                game_over = True
                 print("player died to enemy")
 
         enemies_pos[i] = new_room
@@ -555,13 +603,59 @@ def toggle_sprites():
     use_sprite = not use_sprite
 
 
-# --- Main loop ---
-clock = pygame.time.Clock()
-running = True
+# --- Game window loop  ---
+home_screen = True
+running = False
+game_over = False
+gmae_won = False
+
+use_sprite = True # toggleable variable to swithc on/off sprites.
 enemy_move_timer = 0
 
+while home_screen:
+# Home screen loop
+    for event in pygame.event.get(): # necessary to prevent crash
+            if event.type == pygame.QUIT:
+                home_screen = False
+                running = False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mx, my = pygame.mouse.get_pos()
+                for name, rect in home_buttons.items():
+                    if rect.collidepoint(mx, my):
+                        if (name == "Start"):
+                            home_screen = False
+                            running = True
+                        if (name == "Options"):
+                            print("options")
 
+    HOME.fill(BLACK)
+    draw_home()
+    pygame.display.flip()
+
+while game_over:
+    for event in pygame.event.get(): # necessary to prevent crash
+            if event.type == pygame.QUIT:
+                running = False
+                game_over = False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mx, my = pygame.mouse.get_pos()
+                for name, rect in home_buttons.items():
+                    if rect.collidepoint(mx, my):
+                        if (name == "Restart"):
+                            game_over = False
+                            running = True
+                        if (name == "Home Screen"):
+                            game_over - False
+                            home_screen = True
+    
+    GAME_OVER.fill(BLACK)
+    draw_game_over()
+    pygame.display.flip()
+
+
+clock = pygame.time.Clock() # need to be right before gameplay loop to ensure proper enemy timing
 while running:
+# Main game loop
     dt = clock.tick(30)
     enemy_move_timer += dt
 
@@ -576,7 +670,6 @@ while running:
                 enemy_turn_counter += 1
                 enemy_move_timer = 0
         else:
-            #next_round()
             update_actions(player_actions)
             use_mask(False)
             use_camera(False)
